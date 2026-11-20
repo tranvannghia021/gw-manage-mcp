@@ -1,7 +1,7 @@
 {
   "name": "gw-manage-mcp",
   "version": "1.0.0",
-  "description": "",
+  "description": "Dashboard + gateway for managing stdio and remote (OAuth) MCP servers, with a meta-tool aggregate endpoint to avoid dumping every tool schema into context.",
   "main": "index.js",
   "directories": {
     "doc": "docs"

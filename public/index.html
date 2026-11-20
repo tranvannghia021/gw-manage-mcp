@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>gw-manage-mcp</title>
+<title>Gateway Manage</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🔌</text></svg>">
 <script>try { const t = localStorage.getItem("theme"); if (t) document.documentElement.dataset.theme = t; } catch {}</script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -102,23 +102,32 @@
   .stat.warn .n { color:var(--warn); } .stat.warn .l svg { color:var(--warn); }
 
   .list { display:flex; flex-direction:column; gap:var(--sp-3); }
-  /* card identity lives in .tile's color, not a loud colored stripe around the whole card */
-  .row { background:var(--surface); border:1px solid var(--line); border-radius:var(--radius-xl); padding:var(--sp-4) var(--sp-4) var(--sp-3); box-shadow:var(--shadow-card); transition:box-shadow .15s, transform .15s; }
+  /* card identity lives in the header band's tint of .tile's hue, not a loud stripe around the whole card */
+  .row { background:var(--surface); border:1px solid var(--line); border-radius:var(--radius-xl); box-shadow:var(--shadow-card); transition:box-shadow .15s, transform .15s; overflow:hidden; }
   .row:hover { box-shadow:var(--shadow-card-hover); transform:translateY(-2px); }
-  .top { display:flex; align-items:center; gap:var(--sp-3); flex-wrap:wrap; }
-  .tile { width:40px; height:40px; border-radius:var(--radius); background:var(--h); color:#fff; display:grid; place-items:center; font:600 19px var(--serif); flex:none; box-shadow:0 6px 14px -6px var(--h); }
+  .cardhead { padding:var(--sp-4); background:linear-gradient(135deg, color-mix(in srgb, var(--h) 10%, var(--surface)) 0%, color-mix(in srgb, var(--h) 24%, var(--surface)) 100%); }
+  .top { display:flex; align-items:flex-start; gap:var(--sp-3); flex-wrap:wrap; }
+  /* soft halo instead of a tight drop-shadow, so the tile reads like it's glowing its own hue */
+  .tile { width:40px; height:40px; border-radius:var(--radius); background:var(--h); color:#fff; display:grid; place-items:center; font:600 19px var(--serif); flex:none; box-shadow:0 0 0 10px color-mix(in srgb, var(--h) 12%, transparent); }
   .name { flex:1; min-width:140px; }
   .name b { font:600 19px var(--serif); display:block; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
   .cmd { font:400 12px var(--mono); color:var(--mut); overflow-wrap:anywhere; }
   .lamp { width:7px; height:7px; border-radius:50%; background:var(--off); flex:none; }
+  .headright { display:flex; flex-direction:column; align-items:flex-end; gap:var(--sp-2); flex:none; }
   /* status reads as a soft badge (tint of its own color) instead of a bare dot + word */
-  .state { display:flex; align-items:center; gap:7px; font-weight:500; font-size:13px; white-space:nowrap; flex:none; padding:4px 11px; border-radius:20px; background:color-mix(in srgb, currentColor 12%, transparent); }
+  .state { display:flex; align-items:center; gap:7px; font-weight:500; font-size:13px; white-space:nowrap; flex:none; padding:4px 8px 4px 11px; border-radius:20px; background:color-mix(in srgb, currentColor 14%, var(--surface)); }
+  .state .chev { width:13px; height:13px; opacity:.6; }
   .running .lamp { background:var(--ok); box-shadow:0 0 0 0 var(--ok); animation:pulse 2.4s infinite; }
   .running .state { color:var(--ok); } .crashed .lamp { background:var(--bad); } .crashed .state { color:var(--bad); }
   .needs_auth .lamp { background:var(--warn); } .needs_auth .state { color:var(--warn); }
   .stopped .state { color:var(--mut); }
   @keyframes pulse { 70% { box-shadow:0 0 0 7px transparent; } 100% { box-shadow:0 0 0 0 transparent; } }
+  .cardbody { padding:var(--sp-3) var(--sp-4) var(--sp-4); }
+  .toolstoggle { display:inline-flex; align-self:flex-start; align-items:center; gap:6px; font:500 13px var(--sans); color:var(--ink); background:var(--base); border:1px solid var(--line); padding:5px var(--sp-3) 5px 10px; border-radius:20px; cursor:pointer; }
+  .toolstoggle svg { width:13px; height:13px; transition:transform .15s; }
+  .toolstoggle[aria-expanded=true] svg { transform:rotate(180deg); }
   .chips { display:flex; gap:6px; flex-wrap:wrap; margin-top:var(--sp-2); }
+  .chips[hidden] { display:none; }
   .chip { display:inline-flex; align-items:center; gap:4px; font:400 12px var(--mono); background:var(--accent-soft); color:var(--ink); padding:3px var(--sp-2); border-radius:20px; }
   .chip svg { width:12px; height:12px; flex:none; opacity:.75; }
   .chip.bad { background:var(--bad-soft); color:var(--bad); }
@@ -127,6 +136,10 @@
   .lasterr.old { background:var(--accent-soft); color:var(--mut); }
   .lasterr b { font-weight:500; }
   .actions { display:flex; gap:6px; flex-wrap:wrap; margin-top:var(--sp-3); align-items:center; }
+  .actions { gap:4px; }
+  .actions .btn { border-radius:999px; padding:var(--sp-2) var(--sp-3); }
+  .actions .btn.quiet:not(.icon) { padding-left:var(--sp-2); }
+  .actions .divider { width:1px; height:20px; background:var(--line); margin:0 2px; flex:none; }
   .actions .sp { flex:1; }
   pre { margin:var(--sp-2) 0 0; padding:var(--sp-3); max-height:180px; overflow:auto; background:var(--log); color:var(--log-ink); border-radius:8px; font:400 12px/1.5 var(--mono); white-space:pre-wrap; }
 
@@ -146,9 +159,12 @@
   .empty b { display:block; color:var(--ink); font-size:18px; margin-bottom:var(--sp-1); }
   .empty .btn { margin-top:var(--sp-3); }
 
-  dialog { background:var(--surface); color:var(--ink); border:0; border-radius:var(--radius-lg); width:min(640px,94vw); max-height:92vh; overflow:auto; padding:var(--sp-5); box-shadow:0 20px 60px rgba(20,19,19,.3); }
+  dialog { position:relative; background:var(--surface); color:var(--ink); border:0; border-radius:var(--radius-lg); width:min(640px,94vw); max-height:92vh; overflow:auto; padding:var(--sp-5); box-shadow:0 20px 60px rgba(20,19,19,.3); }
   dialog::backdrop { background:rgba(20,19,19,.5); }
-  dialog h2 { margin:0 0 var(--sp-1); font:600 22px var(--serif); }
+  dialog h2 { margin:0 0 var(--sp-1); font:600 22px var(--serif); padding-right:var(--sp-6); }
+  .dlg-x { position:absolute; top:var(--sp-3); right:var(--sp-3); width:32px; height:32px; display:grid; place-items:center; border:0; background:transparent; color:var(--mut); border-radius:50%; cursor:pointer; }
+  .dlg-x:hover { background:var(--accent-soft); color:var(--ink); }
+  .dlg-x svg { width:18px; height:18px; }
   label { display:block; margin:var(--sp-3) 0 var(--sp-1); font-size:13px; font-weight:500; color:var(--mut); }
   .check { display:flex; align-items:center; gap:var(--sp-2); margin-top:var(--sp-4); font-weight:400; color:var(--ink); }
   .foot { display:flex; gap:var(--sp-2); justify-content:flex-end; margin-top:var(--sp-5); flex-wrap:wrap; }
@@ -164,8 +180,14 @@
   .seg .btn:first-child { border-radius:var(--radius) 0 0 var(--radius); }
   .seg .btn:last-child { border-radius:0 var(--radius) var(--radius) 0; margin-left:-1px; }
   .seg .btn[aria-pressed=true] { background:var(--accent-soft); border-color:var(--accent); position:relative; }
+  .filterrow { display:flex; align-items:center; justify-content:space-between; gap:var(--sp-3); flex-wrap:wrap; margin-bottom:var(--sp-3); }
+  .filtertabs { display:flex; gap:var(--sp-2); flex-wrap:wrap; }
+  .filtertabs .btn { display:flex; align-items:center; gap:6px; }
+  .filtertabs .btn b { font-size:12px; font-weight:700; background:color-mix(in srgb, currentColor 16%, transparent); border-radius:999px; padding:1px 7px; }
+  .filtertabs .btn[aria-pressed=true] { background:var(--accent-soft); border-color:var(--accent); color:var(--accent); }
   .list.grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(300px,1fr)); gap:var(--sp-3); }
   .grid .row { display:flex; flex-direction:column; }
+  .grid .cardbody { display:flex; flex-direction:column; flex:1; }
   .grid .actions { margin-top:auto; padding-top:var(--sp-3); }
   /* grid cards share one anatomy: long text is truncated (full command in the tooltip) so every card lines up */
   .grid .top { flex-wrap:nowrap; }
@@ -193,7 +215,7 @@
 <body>
 <div class="shell">
   <aside class="sidebar">
-    <div class="brand"><span class="brand-mark">G</span>gw-manage-mcp</div>
+    <div class="brand"><span class="brand-mark">G</span>Gateway Manage</div>
     <nav class="nav">
       <button class="navitem" data-page="overview">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>
@@ -239,7 +261,8 @@
       </section>
 
       <section class="page" id="page-servers" hidden>
-        <div class="row-btns" style="margin-bottom:var(--sp-3)">
+        <div class="filterrow">
+          <div class="filtertabs" id="filtertabs" role="group" aria-label="Filter by status"></div>
           <div class="seg" role="group" aria-label="Layout">
             <button class="btn" data-view="list" aria-pressed="true">List</button>
             <button class="btn" data-view="grid" aria-pressed="false">Grid</button>
@@ -287,8 +310,11 @@
 </div>
 
 <dialog id="dlg"><form method="dialog" id="form">
+  <button type="button" class="dlg-x" id="dlg-x" aria-label="Close"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
   <h2 id="dlg-title">Add server</h2>
   <label for="f-name">Name (letters, digits, -)</label><input type="text" id="f-name" autocomplete="off">
+  <label for="f-description">What is this for? <span class="note" style="font-weight:400">(shown to the AI calling the gateway, so it knows this server exists)</span></label>
+  <input type="text" id="f-description" placeholder="e.g. Internal GitLab — merge requests, pipelines, issues" autocomplete="off">
   <label for="f-type">Type</label>
   <select id="f-type">
     <option value="stdio">stdio (local command)</option>
@@ -314,6 +340,7 @@
   </div>
 </form></dialog>
 <dialog id="confirmdlg"><form method="dialog">
+  <button type="button" class="dlg-x" id="confirmdlg-x" aria-label="Close"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
   <h2 id="confirm-title">Delete server?</h2>
   <p class="note" id="confirm-body" style="margin-top:0"></p>
   <div class="foot">
@@ -322,6 +349,7 @@
   </div>
 </form></dialog>
 <dialog id="logdlg"><form method="dialog">
+  <button type="button" class="dlg-x" id="logdlg-x" aria-label="Close"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
   <h2 id="logdlg-title">Logs</h2>
   <pre id="log-pre" tabindex="0"></pre>
   <div class="foot" style="justify-content:space-between">
@@ -341,6 +369,7 @@ const palette = ["#d97757", "#6a9bcc", "#788c5d", "#c46686", "#bf8f3f", "#8a7bb5
 const color = (n) => palette[[...n].reduce((h, c) => (h * 31 + c.charCodeAt(0)) % 997, 7) % palette.length];
 let servers = [];
 const busy = new Set();
+const expanded = new Set(); // server names whose "N tools" details are toggled open
 let token = localStorage.getItem("token") || "";
 
 async function api(path, method = "GET", body) {
@@ -381,6 +410,7 @@ const ICON = {
   logs: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16v12H8l-4 4V4z"/><path d="M8 9h8M8 12h5"/></svg>`,
   edit: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>`,
   trash: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m3 0-1 14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2L4 6"/></svg>`,
+  chevron: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>`,
 };
 const STAT_ICONS = {
   running: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M10 8.5v7l6-3.5-6-3.5z" fill="currentColor" stroke="none"/></svg>`,
@@ -470,8 +500,32 @@ document.querySelectorAll("[data-view]").forEach((b) => {
   };
 });
 
+// Filter tabs: a predicate per status bucket, counts rebuilt from the live `servers` list each render.
+const failingNow = (s) => s.lastError && !(s.lastOkAt >= s.lastError.at);
+const FILTERS = [
+  { key: "all", label: "All", test: () => true },
+  { key: "running", label: "Running", test: (s) => s.status === "running" },
+  { key: "attention", label: "Needs attention", test: (s) => s.status === "crashed" || s.status === "needs_auth" },
+  { key: "failed", label: "Failed calls", test: failingNow },
+  { key: "stopped", label: "Stopped", test: (s) => s.status === "stopped" },
+];
+let filter = "all";
+function renderFilterTabs() {
+  $("filtertabs").innerHTML = FILTERS.map((f) => {
+    const n = servers.filter(f.test).length;
+    return `<button class="btn quiet" data-filter="${f.key}" aria-pressed="${filter === f.key}">${f.label}<b>${n}</b></button>`;
+  }).join("");
+}
+$("filtertabs").onclick = (ev) => {
+  const key = ev.target.closest("[data-filter]")?.dataset.filter;
+  if (!key) return;
+  filter = key;
+  render();
+};
+
 function render() {
   renderSummary();
+  renderFilterTabs();
   $("list").className = "list " + view;
   document.querySelectorAll("[data-view]").forEach((b) => b.setAttribute("aria-pressed", b.dataset.view === view));
   if (!servers.length) {
@@ -479,9 +533,10 @@ function render() {
     return;
   }
   const q = $("q").value.trim().toLowerCase();
+  const active = FILTERS.find((f) => f.key === filter) || FILTERS[0];
   // match name, command line, status, or "failed" for servers whose latest call failed
-  const shown = servers.filter((s) => !q || [s.name, s.command, ...s.args, s.status, s.lastError && !(s.lastOkAt >= s.lastError.at) ? "failed" : ""].join(" ").toLowerCase().includes(q));
-  $("count").textContent = q ? `${shown.length} of ${servers.length}` : "";
+  const shown = servers.filter((s) => active.test(s) && (!q || [s.name, s.command, ...s.args, s.status, failingNow(s) ? "failed" : ""].join(" ").toLowerCase().includes(q)));
+  $("count").textContent = q || filter !== "all" ? `${shown.length} of ${servers.length}` : "";
   if (!shown.length) {
     $("list").innerHTML = `<div class="empty"><b>No server matches "${esc(q)}"</b>Try a name, a command, or a status like running, crashed or failed.</div>`;
     return;
@@ -490,32 +545,43 @@ function render() {
     const b = busy.has(s.name);
     const envN = Object.keys(s.env).length;
     const old = s.lastError && s.lastOkAt >= s.lastError.at; // failure is history: a later call succeeded
-    return `<article class="row ${s.status}" style="--h:${color(s.name)}">
-      <div class="top">
-        <div class="tile">${esc(s.name[0].toUpperCase())}</div>
-        <div class="name"><b>${esc(s.name)}</b><div class="cmd" title="${esc(s.type === "http" ? s.url : [s.command, ...s.args].join(" "))}">${esc(s.type === "http" ? s.url : [s.command, ...s.args].join(" "))}</div></div>
-        <div class="state"><i class="lamp"></i>${s.status}</div>
-      </div>
-      <div class="chips">
+    const open = expanded.has(s.name);
+    const extraChips = `
         ${s.pid ? `<span class="chip">${ICON.pid}pid ${s.pid}</span>` : ""}
-        ${s.status === "running" ? `<span class="chip">${ICON.tools}${s.tools} tools</span>` : ""}
         ${envN ? `<span class="chip">${ICON.env}${envN} env</span>` : ""}
         ${s.enabled ? "" : `<span class="chip">${ICON.manual}manual start</span>`}
-        ${s.errors ? `<span class="chip ${old ? "" : "bad"}">${ICON.calls}${s.errors} of ${s.calls} calls failed</span>` : s.calls ? `<span class="chip">${ICON.calls}${s.calls} calls</span>` : ""}
+        ${s.errors ? `<span class="chip ${old ? "" : "bad"}">${ICON.calls}${s.errors} of ${s.calls} calls failed</span>` : s.calls ? `<span class="chip">${ICON.calls}${s.calls} calls</span>` : ""}`;
+    return `<article class="row ${s.status}" style="--h:${color(s.name)}">
+      <div class="cardhead">
+        <div class="top">
+          <div class="tile">${esc(s.name[0].toUpperCase())}</div>
+          <div class="name"><b>${esc(s.name)}</b><div class="cmd" title="${esc(s.type === "http" ? s.url : [s.command, ...s.args].join(" "))}">${esc(s.type === "http" ? s.url : [s.command, ...s.args].join(" "))}</div></div>
+          <div class="headright">
+            <div class="state"><i class="lamp"></i>${s.status}${ICON.chevron.replace("<svg ", '<svg class="chev" ')}</div>
+            <button class="btn quiet danger icon" data-a="delete" data-n="${esc(s.name)}" aria-label="Delete ${esc(s.name)}" title="Delete">${ICON.trash}</button>
+          </div>
+        </div>
       </div>
-      ${s.lastError ? `<div class="lasterr ${old ? "old" : ""}" title="${esc(s.lastError.msg)}"><b>${esc(s.lastError.tool)}</b> failed ${ago(s.lastError.at)}${old ? " (later calls succeeded)" : ""}: ${esc(s.lastError.msg)}</div>` : ""}
-      ${s.status === "needs_auth" && s.authUrl ? `<div class="lasterr">Needs OAuth login. <a href="${esc(s.authUrl)}" target="_blank" rel="noopener">Click to authorize</a>, then come back.</div>` : ""}
-      <div class="actions" data-n="${esc(s.name)}">
+      <div class="cardbody">
         ${s.status === "running"
-          ? `<button class="btn primary" data-a="restart" ${b ? "disabled" : ""}>${b ? "Working…" : "Restart"}</button>
-             <button class="btn" data-a="stop" ${b ? "disabled" : ""}>Stop</button>`
-          : s.status === "needs_auth"
-          ? `<button class="btn primary" data-a="start" ${b ? "disabled" : ""}>${b ? "Working…" : "Retry"}</button>`
-          : `<button class="btn primary" data-a="start" ${b ? "disabled" : ""}>${b ? "Working…" : s.status === "crashed" ? "Start again" : "Start"}</button>`}
-        <button class="btn quiet" data-a="logs">${ICON.logs}Logs (${s.logs.length})</button>
-        <span class="sp"></span>
-        <button class="btn quiet icon" data-a="edit" aria-label="Edit ${esc(s.name)}" title="Edit">${ICON.edit}</button>
-        <button class="btn quiet danger icon" data-a="delete" aria-label="Delete ${esc(s.name)}" title="Delete">${ICON.trash}</button>
+          ? `<button class="toolstoggle" data-toggle="${esc(s.name)}" aria-expanded="${open}">${ICON.chevron}${s.tools} tools</button>`
+          : ""}
+        <div class="chips" ${open || s.status !== "running" ? "" : "hidden"}>${extraChips}</div>
+        ${s.lastError ? `<div class="lasterr ${old ? "old" : ""}" title="${esc(s.lastError.msg)}"><b>${esc(s.lastError.tool)}</b> failed ${ago(s.lastError.at)}${old ? " (later calls succeeded)" : ""}: ${esc(s.lastError.msg)}</div>` : ""}
+        ${s.status === "needs_auth" && s.authUrl ? `<div class="lasterr">Needs OAuth login. <a href="${esc(s.authUrl)}" target="_blank" rel="noopener">Click to authorize</a>, then come back.</div>` : ""}
+        ${s.status === "crashed" && s.logs.length ? `<div class="lasterr" title="${esc(s.logs[s.logs.length - 1])}">Failed to start: ${esc(s.logs[s.logs.length - 1])}</div>` : ""}
+        <div class="actions" data-n="${esc(s.name)}">
+          ${s.status === "running"
+            ? `<button class="btn primary" data-a="restart" ${b ? "disabled" : ""}>${b ? "Working…" : "Restart"}</button>
+               <button class="btn" data-a="stop" ${b ? "disabled" : ""}>Stop</button>`
+            : s.status === "needs_auth"
+            ? `<button class="btn primary" data-a="start" ${b ? "disabled" : ""}>${b ? "Working…" : "Retry"}</button>`
+            : `<button class="btn primary" data-a="start" ${b ? "disabled" : ""}>${b ? "Working…" : s.status === "crashed" ? "Start again" : "Start"}</button>`}
+          <span class="divider"></span>
+          <button class="btn quiet" data-a="logs">${ICON.logs}Logs (${s.logs.length})</button>
+          <span class="divider"></span>
+          <button class="btn quiet icon" data-a="edit" aria-label="Edit ${esc(s.name)}" title="Edit">${ICON.edit}</button>
+        </div>
       </div>
     </article>`;
   }).join("");
@@ -603,9 +669,10 @@ function syncTypeFields() {
 $("f-type").addEventListener("change", syncTypeFields);
 
 function openForm(name) {
-  const s = servers.find((x) => x.name === name) || { name: "", type: "stdio", command: "", args: [], env: {}, url: "", enabled: true };
+  const s = servers.find((x) => x.name === name) || { name: "", type: "stdio", command: "", args: [], env: {}, url: "", enabled: true, description: "" };
   $("dlg-title").textContent = name ? "Edit " + name : "Add server";
   $("f-name").value = s.name; $("f-name").disabled = !!name;
+  $("f-description").value = s.description || "";
   $("f-type").value = s.type || "stdio";
   $("f-command").value = s.command;
   $("f-args").value = s.args.join("\n");
@@ -634,6 +701,7 @@ async function save(restart) {
       command: $("f-command").value,
       args: $("f-args").value.split("\n").filter((l) => l.trim()),
       url: $("f-url").value.trim(),
+      description: $("f-description").value.trim(),
       env, enabled: $("f-enabled").checked,
     });
     $("dlg").close();
@@ -709,13 +777,14 @@ function confirmDelete(name) {
     const done = (ok) => { $("confirmdlg").close(); resolve(ok); };
     $("confirm-ok").onclick = () => done(true);
     $("confirm-cancel").onclick = () => done(false);
+    $("confirmdlg-x").onclick = () => done(false);
     $("confirmdlg").onclose = () => resolve(false); // Esc or backdrop click
   });
 }
 
 $("topbar-add").onclick = () => openForm();
-$("cancel").onclick = () => $("dlg").close();
-$("logdlg-close").onclick = () => $("logdlg").close();
+$("cancel").onclick = $("dlg-x").onclick = () => $("dlg").close();
+$("logdlg-close").onclick = $("logdlg-x").onclick = () => $("logdlg").close();
 $("logdlg").addEventListener("close", () => { logServer = null; });
 $("log-follow").onchange = () => { if ($("log-follow").checked) $("log-pre").scrollTop = $("log-pre").scrollHeight; };
 $("log-copy").onclick = async () => {
@@ -727,6 +796,12 @@ $("log-copy").onclick = async () => {
 $("save").onclick = () => save(false);
 $("save-restart").onclick = () => save(true);
 $("list").onclick = async (ev) => {
+  const tog = ev.target.closest("[data-toggle]");
+  if (tog) {
+    const name = tog.dataset.toggle;
+    expanded.has(name) ? expanded.delete(name) : expanded.add(name);
+    return render();
+  }
   const btn = ev.target.closest("button[data-a]");
   if (!btn) return;
   const a = btn.dataset.a, name = btn.closest("[data-n]")?.dataset.n;

@@ -9,6 +9,7 @@ import {
 } from "@modelcontextprotocol/sdk/types.js";
 import type { Tool } from "@modelcontextprotocol/sdk/types.js";
 import type { Manager } from "./manager.ts";
+import { rankTools, list as listServers } from "./db.ts";
 
 /**
  * The aggregate endpoint (/mcp, every server) exposes just these two tools instead of flattening
@@ -46,13 +47,37 @@ const META_TOOLS: Tool[] = [
   },
 ];
 
-function searchTools(manager: Manager, query: string, limit = 8) {
-  const terms = query.toLowerCase().split(/\s+/).filter(Boolean);
+// Pulls searchable text out of a JSON schema: property names plus every "description"/"enum"
+// string, so a param like `scope: enum ["issues", "merge_requests", ...]` makes its tool findable
+// by "issue" even though the tool's own top-level description never says that word.
+function schemaText(node: unknown): string {
+  if (node == null || typeof node !== "object") return "";
+  const parts: string[] = [];
+  for (const [key, val] of Object.entries(node as Record<string, unknown>)) {
+    if (key === "description" && typeof val === "string") parts.push(val);
+    else if (key === "enum" && Array.isArray(val)) parts.push(...val.filter((v) => typeof v === "string"));
+    else if (key === "properties" && val && typeof val === "object") parts.push(Object.keys(val).join(" "));
+    if (val && typeof val === "object") parts.push(schemaText(val));
+  }
+  return parts.join(" ");
+}
+
+async function searchTools(manager: Manager, query: string, limit = 8) {
   const all = manager.allTools();
-  const matches = all.filter((t) => {
-    const hay = `${t.name} ${t.description ?? ""}`.toLowerCase();
-    return terms.every((term) => hay.includes(term));
+  const descByServer = new Map((await listServers()).map((s) => [s.name, s.description ?? ""]));
+  // "server__tool" -> "server tool" so a query like "gitlab" ranks that server's tools too; the
+  // server's own description is mixed in so a query matching its purpose finds its tools even when
+  // neither the tool name nor its schema happens to use that wording.
+  const items = all.map((t) => {
+    const server = t.name.split("__")[0];
+    return {
+      name: t.name,
+      text: `${t.name.replace("__", " ")} ${descByServer.get(server) ?? ""} ${t.description ?? ""} ${schemaText(t.inputSchema)}`,
+    };
   });
+  const ranked = await rankTools(query, items);
+  const byName = new Map(all.map((t) => [t.name, t]));
+  const matches = ranked.map((n) => byName.get(n)!).filter(Boolean);
   return {
     total: all.length,
     matched: matches.length,
@@ -78,18 +103,33 @@ export function mcpHandler(manager: Manager) {
         res.status(400).json({ jsonrpc: "2.0", error: { code: -32000, message: "no valid session" }, id: null });
         return;
       }
+      const only: string | undefined = req.params.name; // set on /mcp/:name, undefined on /mcp
+      // "instructions" is a client-visible hint shown at session start (part of the initialize
+      // result) — without it, the model only sees two generically-named tools and has no idea
+      // what domains they cover, so it never thinks to reach for them. Naming the connected
+      // servers here is what actually gets this MCP considered instead of skipped.
+      const running = (await listServers()).filter((s) => manager.status(s.name).status === "running");
+      // "mcp123" alone tells a model nothing — the per-server description (set from the dashboard)
+      // is what actually explains what each one is for.
+      const lines = running.map((s) => (s.description ? `${s.name} — ${s.description}` : s.name)).join("; ");
       const server = new Server(
         { name: "gw-manage-mcp", version: "0.1.0" },
-        { capabilities: { tools: { listChanged: true } } },
+        {
+          capabilities: { tools: { listChanged: true } },
+          instructions: only
+            ? undefined
+            : `Gives access to internal tools from: ${lines || "(no server running)"}. ` +
+              `Whenever a request might involve one of those services, call search_tools with a keyword first — ` +
+              `don't assume it can't be done without checking — then call_tool by the exact name it returns.`,
+        },
       );
-      const only: string | undefined = req.params.name; // set on /mcp/:name, undefined on /mcp
       server.setRequestHandler(ListToolsRequestSchema, async () => ({ tools: only ? manager.allTools(only) : META_TOOLS }));
       server.setRequestHandler(CallToolRequestSchema, async (r) => {
         try {
           if (!only) {
             if (r.params.name === "search_tools") {
               const { query, limit } = (r.params.arguments ?? {}) as { query?: string; limit?: number };
-              return { content: [{ type: "text", text: JSON.stringify(searchTools(manager, query ?? "", limit)) }] };
+              return { content: [{ type: "text", text: JSON.stringify(await searchTools(manager, query ?? "", limit)) }] };
             }
             if (r.params.name === "call_tool") {
               const { name, arguments: args } = (r.params.arguments ?? {}) as { name?: string; arguments?: Record<string, unknown> };

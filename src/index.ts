@@ -30,19 +30,21 @@ app.get("/api/servers", auth, wrap(async (_req, res) => {
 }));
 
 app.put("/api/servers/:name", auth, wrap(async (req, res) => {
-  const { type = "stdio", command, args = [], env = {}, url, enabled = true } = req.body ?? {};
+  const { type = "stdio", command, args = [], env = {}, url, enabled = true, description } = req.body ?? {};
   const name = req.params.name;
   if (!/^[A-Za-z0-9-]+$/.test(name)) return void res.status(400).json({ error: "name must match [A-Za-z0-9-]+" });
   if (type !== "stdio" && type !== "http") return void res.status(400).json({ error: "type must be stdio or http" });
   if (typeof env !== "object" || env === null || !Object.values(env).every((v) => typeof v === "string"))
     return void res.status(400).json({ error: "env must be {string:string}" });
+  if (description != null && typeof description !== "string") return void res.status(400).json({ error: "description must be a string" });
+  const desc = typeof description === "string" ? description.trim() || null : null;
   if (type === "http") {
     if (typeof url !== "string" || !/^https?:\/\//.test(url)) return void res.status(400).json({ error: "url required (http/https)" });
-    await db.upsert({ name, type, command: "", args: [], env, url, enabled: !!enabled });
+    await db.upsert({ name, type, command: "", args: [], env, url, enabled: !!enabled, description: desc });
   } else {
     if (typeof command !== "string" || !command.trim()) return void res.status(400).json({ error: "command required" });
     if (!Array.isArray(args) || !args.every((a) => typeof a === "string")) return void res.status(400).json({ error: "args must be string[]" });
-    await db.upsert({ name, type, command: command.trim(), args, env, url: null, enabled: !!enabled });
+    await db.upsert({ name, type, command: command.trim(), args, env, url: null, enabled: !!enabled, description: desc });
   }
   res.json({ ok: true });
 }));
