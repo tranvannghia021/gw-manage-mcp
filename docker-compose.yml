@@ -1,0 +1,38 @@
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: mcp
+      POSTGRES_PASSWORD: mcp
+      POSTGRES_DB: mcp
+    ports: ["127.0.0.1:5440:5432"]
+    volumes: [pgdata:/var/lib/postgresql/data]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U mcp"]
+      interval: 2s
+      retries: 20
+
+  app:
+    build: .
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    ports: ["127.0.0.1:${APP_PORT:-3100}:3100"]
+    environment:
+      DATABASE_URL: postgres://mcp:mcp@db:5432/mcp
+      PUBLIC_URL: http://127.0.0.1:${APP_PORT:-3100}
+      AUTH_TOKEN: ${AUTH_TOKEN:-}
+      # bind-all is fine here: the port mapping above already restricts reachability to 127.0.0.1
+      # on the host; without this, the app binds 127.0.0.1 *inside* the container's own netns and
+      # the docker-proxied connection from outside gets an empty reply.
+      HOST: 0.0.0.0
+    volumes:
+      # these must match where this host's stdio MCP servers actually live — override in .env
+      # (see .env.docker.example) if yours are somewhere else.
+      - ${MCP_DIR:-/home/dev/Documents/mcp}:/home/dev/Documents/mcp:ro
+      - ${GOBIN_DIR:-/home/dev/go/bin}:/home/dev/go/bin:ro
+
+volumes:
+  pgdata:
