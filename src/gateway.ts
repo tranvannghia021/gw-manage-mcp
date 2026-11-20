@@ -99,6 +99,13 @@ export function mcpHandler(manager: Manager) {
     const id = req.header("mcp-session-id");
     let s = id ? sessions.get(id) : undefined;
     if (!s) {
+      // Sessions live in memory, so every restart/redeploy drops them. Per the MCP spec an unknown
+      // session id must get 404 — that is what tells the client to re-initialize on its own; a 400
+      // makes Claude Code treat it as a hard failure and show the server as disconnected.
+      if (id) {
+        res.status(404).json({ jsonrpc: "2.0", error: { code: -32001, message: "session not found" }, id: null });
+        return;
+      }
       if (req.method !== "POST" || !isInitializeRequest(req.body)) {
         res.status(400).json({ jsonrpc: "2.0", error: { code: -32000, message: "no valid session" }, id: null });
         return;
